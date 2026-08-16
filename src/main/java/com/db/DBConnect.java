@@ -5,9 +5,17 @@ import java.sql.DriverManager;
 import java.sql.Statement;
 
 public class DBConnect {
-    private static final String URL = "jdbc:mysql://localhost:3306/hms_2?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata";
-    private static final String USER = "root";
-    private static final String PASS = "shubham@1234";
+
+    // Exact Aiven Credentials from Environment Variables / Screenshot
+    private static final String HOST = "mysql-3ca0d6d-shubhamshinde89555-40bc.c.aivencloud.com";
+    private static final String PORT = "15732";
+    private static final String DB_NAME = "hms_2"; // Dedicated database for Hospital System
+
+    private static final String DEFAULT_URL = "jdbc:mysql://" + HOST + ":" + PORT + "/" + DB_NAME + "?useSSL=true&requireSSL=true&verifyServerCertificate=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata";
+
+    private static final String USER = System.getenv().getOrDefault("DB_USERNAME", System.getenv().getOrDefault("DB_USER", "avnadmin"));
+    private static final String PASS = System.getenv().getOrDefault("DB_PASSWORD", System.getenv().getOrDefault("DB_PASS", "REMOVED_AIVEN_PASSWORD/n"));
+    private static final String URL  = System.getenv().getOrDefault("DB_URL", DEFAULT_URL);
 
     private static Connection conn;
 
@@ -15,6 +23,16 @@ public class DBConnect {
         try {
             if (conn == null || conn.isClosed() || !conn.isValid(3)) {
                 Class.forName("com.mysql.cj.jdbc.Driver");
+                
+                // First ensure database hms_2 exists on Aiven Cloud
+                try {
+                    String rootUrl = "jdbc:mysql://" + HOST + ":" + PORT + "/defaultdb?useSSL=true&requireSSL=true&verifyServerCertificate=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata";
+                    try (Connection rootConn = DriverManager.getConnection(rootUrl, USER, PASS);
+                         Statement st = rootConn.createStatement()) {
+                        st.execute("CREATE DATABASE IF NOT EXISTS " + DB_NAME);
+                    }
+                } catch (Exception ignored) {}
+
                 conn = DriverManager.getConnection(URL, USER, PASS);
                 initTables(conn);
             }
